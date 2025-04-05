@@ -1,0 +1,3304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Succinct Ninja</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #000000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #fff;
+            background-image: url('');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            overflow: hidden;
+            image-rendering: pixelated;
+            margin: 0;
+            padding: 0;
+            touch-action: manipulation; /* Çift dokunma zoomunu devre dışı bırak */
+        }
+        
+        .game-container {
+            width: 100%;
+            max-width: 850px;
+            text-align: center;
+            background-color: rgba(0, 0, 0, 0.85);
+            border: 4px solid #ff33ff;
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.5), inset 0 0 10px rgba(255, 0, 255, 0.3);
+            position: relative;
+            margin: 20px auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            aspect-ratio: 4/3;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            color: #ff33ff;
+            margin-bottom: 20px;
+            text-shadow: 4px 4px 0px #000, 6px 6px 0px #880088;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        
+        #gameCanvas {
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 4px solid #ff33ff;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+            image-rendering: pixelated;
+            width: 800px;
+            height: 600px;
+            max-width: 100%;
+            max-height: 70vh;
+            object-fit: contain;
+        }
+        
+        button {
+            background-color: #000;
+            color: #ff33ff;
+            border: 2px solid #ff33ff;
+            padding: 10px 20px;
+            margin: 8px 0;
+            font-size: 0.9rem;
+            font-family: 'Press Start 2P', monospace;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 8px rgba(255, 0, 255, 0.5);
+            width: 100%;
+            max-width: 220px;
+            border-radius: 4px;
+        }
+        
+        @media (max-width: 768px) {
+            button {
+                /* Mobil cihazlar için dokunmatik hedef alanı en az 44x44px olmalı */
+                min-height: 44px;
+                min-width: 44px;
+                padding: 12px 20px;
+                touch-action: manipulation;
+            }
+        }
+        
+        button:hover {
+            background-color: #ff33ff;
+            color: #000;
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.8);
+        }
+        
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 0 5px rgba(255, 0, 255, 0.5);
+        }
+        
+        .score-board {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            margin: 10px auto 20px;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 2px solid #ff33ff;
+            box-shadow: 0 0 10px rgba(255, 51, 255, 0.5);
+            max-width: 800px;
+            width: 100%;
+            border-radius: 4px;
+        }
+        
+        .score {
+            display: flex;
+            align-items: center;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #ff33ff;
+            text-shadow: 2px 2px 0px #000;
+            padding: 0 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: 1px solid #ff33ff;
+            border-radius: 4px;
+        }
+        
+        .lives {
+            display: flex;
+            align-items: center;
+            padding: 5px 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: 1px solid #ff5555;
+            border-radius: 4px;
+        }
+        
+        .combo-multiplier {
+            display: flex;
+            align-items: center;
+            font-size: 1rem;
+            color: #33ff33;
+            text-shadow: 2px 2px 0px #000;
+            padding: 0 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: 1px solid #33ff33;
+            border-radius: 4px;
+        }
+        
+        .time-remaining {
+            display: flex;
+            align-items: center;
+            font-size: 1rem;
+            color: #ffcc00;
+            text-shadow: 2px 2px 0px #000;
+            padding: 0 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: 1px solid #ffcc00;
+            border-radius: 4px;
+        }
+        
+        /* Time warning animation */
+        @keyframes timeWarning {
+            0% { color: #ffcc00; border-color: #ffcc00; }
+            50% { color: #ff3333; border-color: #ff3333; }
+            100% { color: #ffcc00; border-color: #ffcc00; }
+        }
+        
+        .time-warning {
+            animation: timeWarning 1s ease-in-out infinite;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        /* Game Over screen */
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #000;
+            padding: 30px 50px;
+            border: 4px solid #ff33ff;
+            z-index: 100;
+            box-shadow: 0 0 30px rgba(255, 0, 255, 0.8), inset 0 0 15px rgba(255, 0, 255, 0.3);
+            min-width: 300px;
+            text-align: center;
+            width: 90%;
+            max-width: 500px;
+        }
+        
+        #gameOver h2 {
+            font-size: 2rem;
+            color: #ff33ff;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 0px #000;
+        }
+        
+        #gameOver p {
+            font-size: 1rem;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+        
+        .game-over-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+        
+        @media (min-width: 768px) {
+            .game-container {
+                padding: 30px;
+            }
+            
+            .game-over-buttons {
+                flex-direction: row;
+                justify-content: center;
+                gap: 20px;
+            }
+            
+            .game-over-buttons button {
+                width: auto;
+                min-width: 200px;
+            }
+        }
+        
+        .ninja-slash {
+            position: absolute;
+            pointer-events: none;
+            z-index: 10;
+            filter: hue-rotate(120deg) brightness(1.2) contrast(1.2);
+        }
+        
+        .fruit-slice {
+            position: absolute;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        .combo-text {
+            position: absolute;
+            font-size: 1.5rem;
+            font-family: 'Press Start 2P', monospace;
+            font-weight: bold;
+            color: #ff33ff;
+            text-shadow: 2px 2px 0px #000;
+            pointer-events: none;
+            z-index: 15;
+            animation: pixelComboFade 1s steps(5) forwards;
+        }
+        
+        @keyframes pixelComboFade {
+            0% { opacity: 0; transform: scale(0.5); }
+            20% { opacity: 1; transform: scale(1.2); }
+            80% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(1); }
+        }
+        
+        /* Heart lives display */
+        .lives-container {
+            display: flex;
+            gap: 5px;
+            margin-left: 8px;
+        }
+        
+        .life-heart {
+            width: 15px;
+            height: 15px;
+            background-color: #ff5555;
+            display: inline-block;
+            position: relative;
+            transform: rotate(45deg);
+            transition: all 0.5s ease;
+            margin-top: 3px;
+            filter: drop-shadow(0 0 3px #ff0000);
+        }
+        
+        .life-heart::before,
+        .life-heart::after {
+            content: '';
+            width: 15px;
+            height: 15px;
+            background-color: #ff5555;
+            border-radius: 50%;
+            position: absolute;
+            transition: all 0.5s ease;
+        }
+        
+        .life-heart::before {
+            top: -7.5px;
+            left: 0;
+        }
+        
+        .life-heart::after {
+            top: 0;
+            left: -7.5px;
+        }
+        
+        .life-heart.empty {
+            background-color: #555;
+            animation: heartLost 0.8s ease-in-out;
+            filter: none;
+        }
+        
+        .life-heart.empty::before,
+        .life-heart.empty::after {
+            background-color: #555;
+        }
+        
+        .life-lost-indicator {
+            position: absolute;
+            color: #ff0000;
+            font-family: 'Press Start 2P', cursive;
+            font-weight: bold;
+            font-size: 18px;
+            text-shadow: 2px 2px 0px #000;
+            z-index: 1000;
+            top: 70px;
+            right: 20px;
+            animation: lifeLostAnim 2s steps(8) forwards;
+        }
+        
+        @keyframes lifeLostAnim {
+            0% { opacity: 0; transform: translateY(-20px) scale(0.5); }
+            10% { opacity: 1; transform: translateY(0) scale(1.2); }
+            20% { transform: translateY(-5px) scale(1.1); }
+            30% { transform: translateY(0) scale(1); }
+            90% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        /* Splash screen styles */
+        #splashScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .splash-logo {
+            font-size: 4rem;
+            color: #ff33ff;
+            margin-bottom: 30px;
+            text-shadow: 0 0 15px #ff33ff;
+            animation: logoGlow 2s infinite alternate;
+            position: relative;
+        }
+        
+        @keyframes logoGlow {
+            0% { text-shadow: 0 0 5px #ff33ff; }
+            100% { text-shadow: 0 0 20px #ff33ff, 0 0 30px #ff33ff; }
+        }
+        
+        .splash-slash {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            background: linear-gradient(to right, transparent, #ff33ff, transparent);
+            opacity: 0;
+            transform: translateX(-100%) skewX(-20deg);
+            animation: slashAnimation 1.5s ease-out 1s forwards;
+        }
+        
+        @keyframes slashAnimation {
+            0% { 
+                opacity: 0;
+                transform: translateX(-100%) skewX(-20deg);
+            }
+            10% { 
+                opacity: 1;
+            }
+            50% { 
+                opacity: 1;
+                transform: translateX(100%) skewX(-20deg);
+            }
+            100% { 
+                opacity: 0;
+                transform: translateX(100%) skewX(-20deg);
+            }
+        }
+        
+        /* Main menu */
+        #mainMenu {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            padding: 30px 20px;
+        }
+        
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 30px;
+            width: 250px;
+            max-width: 100%;
+        }
+        
+        /* High scores screen */
+        #highScoresScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        
+        .scores-list {
+            margin: 20px 0;
+            width: 80%;
+            max-width: 400px;
+            border: 2px solid #ff33ff;
+            padding: 15px;
+        }
+        
+        /* Countdown screen */
+        #countdown {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 150;
+        }
+        
+        .countdown-number {
+            font-size: 120px;
+            font-family: 'Press Start 2P', cursive;
+            color: #33ff33;
+            text-shadow: 0 0 20px #33ff33, 0 0 30px #33ff33;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 151;
+            text-align: center;
+            letter-spacing: -2px;
+        }
+        
+        @keyframes countdownPulse {
+            0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+            20% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            80% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+        }
+        
+        /* CRT Effects */
+        .crt-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: linear-gradient(rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
+            background-size: 100% 4px;
+            z-index: 101;
+        }
+        
+        /* Combo multiplier display */
+        .combo-multiplier {
+            position: absolute;
+            top: 70px;
+            right: 20px;
+            font-size: 1.2rem;
+            color: #ff33ff;
+            text-shadow: 0 0 5px #ff33ff;
+        }
+        
+        /* Settings screen styles */
+        #settingsScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        
+        .settings-options {
+            margin: 20px 0;
+            width: 80%;
+            max-width: 400px;
+            border: 2px solid #ff33ff;
+            padding: 15px;
+        }
+        
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px dashed #ff33ff;
+        }
+        
+        /* Toggle switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #555;
+            transition: .4s;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: #fff;
+            transition: .4s;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: #ff33ff;
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+        
+        /* Floating fruit animation */
+        @keyframes floatUp {
+            0% { transform: translateY(20px); opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateY(-100px); opacity: 0; }
+        }
+        
+        .floating-fruit {
+            position: absolute;
+            pointer-events: none;
+            z-index: 5;
+            animation: floatUp 4s linear forwards;
+        }
+        
+        /* Critical hit text */
+        .critical-text {
+            position: absolute;
+            font-size: 1.5rem;
+            font-family: 'Press Start 2P', monospace;
+            font-weight: bold;
+            color: #ffff00;
+            text-shadow: 2px 2px 0px #000;
+            pointer-events: none;
+            z-index: 15;
+            animation: criticalFade 1s steps(5) forwards;
+        }
+        
+        @keyframes criticalFade {
+            0% { opacity: 0; transform: scale(0.5); }
+            20% { opacity: 1; transform: scale(1.2); }
+            80% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(1); }
+        }
+        
+        /* Special fruit bonus text */
+        .bonus-text {
+            position: absolute;
+            font-size: 1.2rem;
+            font-family: 'Press Start 2P', monospace;
+            font-weight: bold;
+            text-shadow: 2px 2px 0px #000;
+            pointer-events: none;
+            z-index: 15;
+            animation: bonusFade 1.5s steps(8) forwards;
+        }
+        
+        .bonus-text.double-points {
+            color: #ffcc00;
+        }
+        
+        .bonus-text.extra-life {
+            color: #ff5555;
+        }
+        
+        .bonus-text.slowdown {
+            color: #33ccff;
+        }
+        
+        @keyframes bonusFade {
+            0% { opacity: 0; transform: scale(0.5) translateY(0); }
+            20% { opacity: 1; transform: scale(1.2) translateY(0); }
+            50% { opacity: 1; transform: scale(1) translateY(-20px); }
+            90% { opacity: 1; transform: scale(1) translateY(-40px); }
+            100% { opacity: 0; transform: scale(1) translateY(-50px); }
+        }
+        
+        /* New high score animation */
+        .high-score-text {
+            color: #ffcc00;
+            text-shadow: 0 0 10px #ffcc00;
+            animation: highScorePulse 1.5s infinite alternate;
+        }
+        
+        @keyframes highScorePulse {
+            0% { transform: scale(1); text-shadow: 0 0 10px #ffcc00; }
+            100% { transform: scale(1.1); text-shadow: 0 0 20px #ffcc00, 0 0 30px #ffcc00; }
+        }
+        
+        /* Screen shake effect */
+        @keyframes screenShake {
+            0% { transform: translate(0, 0); }
+            10% { transform: translate(-5px, -5px); }
+            20% { transform: translate(5px, 5px); }
+            30% { transform: translate(-5px, 5px); }
+            40% { transform: translate(5px, -5px); }
+            50% { transform: translate(0, 0); }
+            60% { transform: translate(-3px, -3px); }
+            70% { transform: translate(3px, 3px); }
+            80% { transform: translate(-3px, 3px); }
+            90% { transform: translate(3px, -3px); }
+            100% { transform: translate(0, 0); }
+        }
+        
+        .shake {
+            animation: screenShake 0.5s ease-in-out;
+        }
+        
+        .score-item {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dashed #ff33ff;
+            padding: 8px 5px;
+            font-size: 0.9rem;
+            transition: background-color 0.3s;
+        }
+        
+        .score-item:hover {
+            background-color: rgba(255, 51, 255, 0.1);
+        }
+        
+        .score-item:last-child {
+            border-bottom: none;
+        }
+        
+        .score-item span:first-child {
+            color: #ff33ff;
+            font-weight: bold;
+            width: 15%;
+            text-align: left;
+        }
+        
+        .score-item span:nth-child(2) {
+            color: #33ff33;
+            width: 35%;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .score-item span:last-child {
+            color: #ffffff;
+            width: 50%;
+            text-align: right;
+            font-size: 0.8rem;
+        }
+        
+        /* Settings and How To Play screens */
+        #settingsScreen, #howToPlayScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            z-index: 150;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .instructions {
+            width: 90%;
+            max-width: 600px;
+            margin: 20px 0;
+            border: 2px solid #ff33ff;
+            padding: 15px;
+            text-align: left;
+            background-color: rgba(0, 0, 0, 0.7);
+            box-shadow: 0 0 10px rgba(255, 51, 255, 0.5);
+        }
+        
+        .instruction-item {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #ff33ff;
+        }
+        
+        .instruction-item:last-child {
+            border-bottom: none;
+        }
+        
+        .instruction-item h3 {
+            color: #ff33ff;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        
+        .instruction-item p {
+            margin: 5px 0;
+            font-size: 0.8rem;
+            color: #33ff33;
+        }
+        
+        .score-item.header {
+            border-bottom: 2px solid #ff33ff;
+            font-weight: bold;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px 5px;
+            margin-bottom: 5px;
+        }
+        
+        .score-item.header span {
+            color: #ff33ff !important;
+            font-size: 1rem;
+        }
+        
+        .score-item.rank-1 {
+            background-color: rgba(255, 215, 0, 0.15);
+        }
+        
+        .score-item.rank-2 {
+            background-color: rgba(192, 192, 192, 0.15);
+        }
+        
+        .score-item.rank-3 {
+            background-color: rgba(205, 127, 50, 0.15);
+        }
+        
+        .no-scores {
+            color: #ffffff;
+            text-align: center;
+        }
+        
+        .no-scores span {
+            color: #ff33ff;
+            font-size: 1.1rem;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        .no-scores p {
+            color: #cccccc;
+            font-size: 0.8rem;
+        }
+        
+        /* Mobile Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                /* Mobil cihazlarda yüksekliği ayarla */
+                min-height: -webkit-fill-available;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+                margin-bottom: 10px;
+            }
+            
+            .game-container {
+                max-width: 100%;
+                width: 100%;
+                padding: 10px;
+                margin: 0;
+                border-width: 3px;
+                /* Yüksekliği ekran boyutuna göre ayarla */
+                height: 100vh;
+                height: -webkit-fill-available;
+                box-sizing: border-box;
+            }
+            
+            #gameCanvas {
+                border-width: 2px;
+                max-height: 50vh;
+            }
+            
+            .score-board {
+                flex-wrap: wrap;
+                gap: 5px;
+                justify-content: center;
+                font-size: 0.8rem;
+                padding: 5px;
+                margin: 5px auto 10px;
+            }
+            
+            .score {
+                font-size: 0.8rem;
+                padding: 5px;
+                margin: 2px;
+                min-width: 80px;
+            }
+            
+            /* Klavyenin ekrana gelme durumunu yönet */
+            @supports (-webkit-touch-callout: none) {
+                .game-container {
+                    height: -webkit-fill-available;
+                }
+            }
+        }
+        
+        /* Small Phones */
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.2rem;
+            }
+            
+            #gameCanvas {
+                max-height: 50vh;
+            }
+            
+            .score-board {
+                font-size: 0.7rem;
+            }
+            
+            .difficulty-selector {
+                flex-direction: column;
+                gap: 3px;
+            }
+            
+            .difficulty-btn {
+                padding: 4px 6px;
+                font-size: 0.7rem;
+                min-width: 50px;
+            }
+        }
+        
+        /* Mobile Responsive Design Media Queries */
+        @media (max-width: 768px) {
+            /* Existing styles... */
+            
+            button {
+                padding: 8px 15px;
+                font-size: 0.8rem;
+                margin: 5px 0;
+            }
+            
+            .menu-buttons {
+                width: 200px;
+                gap: 8px;
+            }
+            
+            #settingsScreen, #howToPlayScreen, #highScoresScreen {
+                width: 95%;
+                padding: 10px;
+                max-height: 85vh;
+            }
+            
+            #settingsScreen h2, #howToPlayScreen h2, #highScoresScreen h2 {
+                font-size: 1.2rem;
+                margin: 8px 0;
+            }
+            
+            .instructions, .settings-options, .scores-list {
+                width: 95%;
+                padding: 8px;
+                margin: 8px 0;
+            }
+            
+            .instruction-item h3 {
+                font-size: 0.9rem;
+            }
+            
+            .instruction-item p {
+                font-size: 0.75rem;
+                padding-left: 5px;
+            }
+            
+            .setting-item {
+                padding: 8px 5px;
+            }
+            
+            .setting-item span {
+                font-size: 0.8rem;
+            }
+        }
+        
+        /* Landscape orientation for mobiles */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .game-container {
+                height: auto;
+                min-height: 100vh;
+                padding: 5px;
+            }
+            
+            h1 {
+                font-size: 1.2rem;
+                margin: 5px 0;
+            }
+            
+            #gameCanvas {
+                max-height: 75vh;
+            }
+            
+            .score-board {
+                margin: 2px auto 5px;
+            }
+            
+            #settingsScreen, #howToPlayScreen, #highScoresScreen {
+                max-height: 90vh;
+            }
+        }
+        
+        /* Portrait orientation for very small devices */
+        @media (max-width: 320px) and (orientation: portrait) {
+            h1 {
+                font-size: 1rem;
+            }
+            
+            .score-board {
+                font-size: 0.7rem;
+            }
+            
+            .score {
+                padding: 3px;
+                font-size: 0.7rem;
+            }
+            
+            button {
+                padding: 6px 12px;
+                font-size: 0.7rem;
+            }
+            
+            #gameCanvas {
+                max-height: 45vh;
+            }
+        }
+        
+        /* Button touch feedback - for mobile optimization */
+        .button-touched {
+            transform: scale(0.95) !important;
+            background-color: #ff33ff !important;
+            color: #000 !important;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.9) !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div id="splashScreen">
+        <div class="splash-logo">
+            SUCCINCT NINJA
+            <div class="splash-slash"></div>
+        </div>
+    </div>
+    
+    <div class="game-container">
+        <!-- CRT Effect Overlay -->
+        <div class="crt-overlay"></div>
+        
+        <!-- Main Menu -->
+        <div id="mainMenu">
+            <h1>Succinct Ninja</h1>
+            <div class="menu-buttons">
+                <button id="startGameBtn">Start Game</button>
+                <button id="highScoresBtn">High Scores</button>
+                <button id="howToPlayBtn">How To Play</button>
+                <button id="settingsBtn">Settings</button>
+            </div>
+            
+            <!-- Floating Fruits for decoration -->
+            <div id="floatingFruits"></div>
+        </div>
+        
+        <!-- High Scores Screen -->
+        <div id="highScoresScreen" class="hidden">
+            <h2>High Scores</h2>
+            <div class="scores-list" id="scoresList">
+                <!-- High scores will be populated here -->
+            </div>
+            <button id="backToMenuBtn">Back to Menu</button>
+        </div>
+        
+        <!-- Settings Screen -->
+        <div id="settingsScreen" class="hidden">
+            <h2>Settings</h2>
+            <div class="settings-options">
+                <div class="setting-item">
+                    <span>Sound</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="soundToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <span>Music</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="musicToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            <button id="settingsBackBtn">Back to Menu</button>
+        </div>
+        
+        <!-- How To Play Screen -->
+        <div id="howToPlayScreen" class="hidden">
+            <h2>How To Play</h2>
+            <div class="instructions">
+                <div class="instruction-item">
+                    <h3>Basic Controls:</h3>
+                    <p>Swipe or drag your mouse/finger across the screen to slice fruits.</p>
+                    <p>The faster you swipe, the more points you earn!</p>
+                </div>
+                <div class="instruction-item">
+                    <h3>Scoring System:</h3>
+                    <p>• Regular Fruits: 10 points</p>
+                    <p>• Special Glowing Fruits: 25 points + special bonus</p>
+                    <p>• Fast Swipes (Critical Hits): Extra 20 points</p>
+                    <p>• Combos: Chain fruit slices for multipliers (up to 8x)</p>
+                </div>
+                <div class="instruction-item">
+                    <h3>Lives System:</h3>
+                    <p>• You have 3 lives</p>
+                    <p>• Missing fruits costs 1 life</p>
+                    <p>• Slicing bombs costs 1 life</p>
+                    <p>• Special fruits may grant extra lives</p>
+                </div>
+                <div class="instruction-item">
+                    <h3>Special Items:</h3>
+                    <p>• Bombs: AVOID THESE! Slicing costs 1 life</p>
+                    <p>• Glowing Fruits: Give special bonuses like extra points, extra lives, or slowdown effects</p>
+                </div>
+            </div>
+            <button id="howToPlayBackBtn">Back to Menu</button>
+        </div>
+        
+        <!-- Game Countdown -->
+        <div id="countdown" class="hidden">
+            <div class="countdown-number">3</div>
+        </div>
+        
+        <!-- Game Area -->
+        <div id="gameArea" class="hidden">
+            <h1>Succinct Ninja</h1>
+            
+            <div class="score-board">
+                <div class="score">Score: <span id="score">0</span></div>
+                <div class="lives"><div class="lives-container" id="livesContainer"></div></div>
+                <div class="combo-multiplier">Combo: <span id="comboMultiplier">x1</span></div>
+                <div class="time-remaining">Time: <span id="timeRemaining">60</span>s</div>
+            </div>
+            
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            
+            <div id="gameOver" class="hidden">
+                <h2>Game Over!</h2>
+                <p>Final Score: <span id="finalScore">0</span></p>
+                <p>High Score: <span id="highScore">0</span></p>
+                <div class="game-over-buttons">
+                    <button id="restartButton">Play Again</button>
+                    <button id="mainMenuButton">Main Menu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio elements -->
+    <audio id="bgMusic" loop>
+        <source src="./assets/audio/temple.mp3" type="audio/mp3">
+    </audio>
+    <audio id="sliceSound">
+        <source src="./assets/audio/slice.mp3" type="audio/mp3">
+    </audio>
+    <audio id="bombSound">
+        <source src="./assets/audio/bomb.mp3" type="audio/mp3">
+    </audio>
+    <audio id="gameOverSound">
+        <source src="./assets/audio/gameover.mp3" type="audio/mp3">
+    </audio>
+    <audio id="comboSound">
+        <source src="./assets/audio/combo.mp3" type="audio/mp3">
+    </audio>
+    <audio id="ninjaYellSound">
+        <source src="./assets/audio/ninja_yell.mp3" type="audio/mp3">
+    </audio>
+    <audio id="countdownSound">
+        <source src="./assets/audio/countdown.mp3" type="audio/mp3">
+    </audio>
+    <audio id="criticalSound">
+        <source src="./assets/audio/critical.mp3" type="audio/mp3">
+    </audio>
+    <audio id="bonusSound">
+        <source src="./assets/audio/bonus.mp3" type="audio/mp3">
+    </audio>
+    <audio id="extraLifeSound">
+        <source src="./assets/audio/extra_life.mp3" type="audio/mp3">
+    </audio>
+    <audio id="slowdownSound">
+        <source src="./assets/audio/slowdown.mp3" type="audio/mp3">
+    </audio>
+    <audio id="swooshSound">
+        <source src="./assets/audio/swoosh.mp3" type="audio/mp3">
+    </audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Game elements
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const scoreDisplay = document.getElementById('score');
+            const finalScoreDisplay = document.getElementById('finalScore');
+            const highScoreDisplay = document.getElementById('highScore');
+            const livesContainer = document.getElementById('livesContainer');
+            const comboMultiplierDisplay = document.getElementById('comboMultiplier');
+            
+            // UI Screens
+            const splashScreen = document.getElementById('splashScreen');
+            const mainMenu = document.getElementById('mainMenu');
+            const gameArea = document.getElementById('gameArea');
+            const gameOverScreen = document.getElementById('gameOver');
+            const highScoresScreen = document.getElementById('highScoresScreen');
+            const countdown = document.getElementById('countdown');
+            const countdownNumber = document.querySelector('.countdown-number');
+            
+            // Buttons
+            const startGameBtn = document.getElementById('startGameBtn');
+            const highScoresBtn = document.getElementById('highScoresBtn');
+            const backToMenuBtn = document.getElementById('backToMenuBtn');
+            const restartButton = document.getElementById('restartButton');
+            const mainMenuButton = document.getElementById('mainMenuButton');
+            const howToPlayBtn = document.getElementById('howToPlayBtn');
+            const howToPlayBackBtn = document.getElementById('howToPlayBackBtn');
+            const settingsBtn = document.getElementById('settingsBtn');
+            const settingsBackBtn = document.getElementById('settingsBackBtn');
+            
+            // Audio elements
+            const bgMusic = document.getElementById('bgMusic');
+            const sliceSound = document.getElementById('sliceSound');
+            const bombSound = document.getElementById('bombSound');
+            const gameOverSound = document.getElementById('gameOverSound');
+            const comboSound = document.getElementById('comboSound');
+            const ninjaYellSound = document.getElementById('ninjaYellSound');
+            const countdownSound = document.getElementById('countdownSound');
+            const criticalSound = document.getElementById('criticalSound');
+            const bonusSound = document.getElementById('bonusSound');
+            const extraLifeSound = document.getElementById('extraLifeSound');
+            const slowdownSound = document.getElementById('slowdownSound');
+            const swooshSound = document.getElementById('swooshSound');
+            
+            // Pixel art için smoothing'i kapatıyoruz
+            ctx.imageSmoothingEnabled = false;
+            
+            // Load images
+            // Grid background will be drawn programmatically
+            
+            // Bonus images for effects
+            const sliceEffectImg = new Image();
+            sliceEffectImg.src = './GnYwoVIb0AAUZu6.jpg';
+            
+            // Splash effect
+            const splashImg = new Image();
+            splashImg.src = './GlAaKOVW8AA8g54.jpg';
+            
+            // Game variables
+            let score = 0;
+            let lives = 3;
+            let maxLives = 3;
+            let highScore = 0;
+            let gameRunning = false;
+            let fruits = [];
+            let slices = [];
+            let combos = [];
+            let particles = [];
+            let lastTimestamp = performance.now();
+            let deltaTime = 0;
+            let fruitSpawnTimer = 0;
+            let bombSpawnTimer = 0;
+            let mouseTrail = [];
+            let mouseX = 0;
+            let mouseY = 0;
+            let lastMouseX = 0;
+            let lastMouseY = 0;
+            let mouseMoveSpeed = 0;
+            let lastMouseMoveTime = 0;
+            let comboCount = 0;
+            let comboTimer = 0;
+            let comboMultiplier = 1;
+            let gameTime = 0;
+            let difficultyLevel = 1;
+            let gravity = 0.25;
+            let difficulty = 1;
+            let slowdownActive = false;
+            let slowdownTimer = 0;
+            let touchIDs = {};
+            let soundEnabled = true;
+            let musicEnabled = true;
+            let isNewHighScore = false;
+            let screenShaking = false;
+            let floatingFruits = [];
+            let countdownFruits = [];
+            let gameTimeRemaining = 60; // 60 seconds game time
+            let gameTimerInterval = null;
+            
+            // Game settings
+            const fruitSpawnBaseInterval = 1200; // ms
+            const bombSpawnBaseInterval = 3000; // ms
+            const fruitSize = 60;
+            const bombSize = 50;
+            const comboTimeout = 1000; // ms for combo to reset
+            const trailLength = 10;
+            const minVelocity = 8;
+            const maxVelocity = 14;
+            const criticalHitThreshold = 20; // px per frame
+            const criticalHitBonus = 20;
+            const slowdownDuration = 5000; // 5 seconds
+            const fruitColors = {
+                0: '#ff5555', // flappy_crab - red
+                1: '#55ff55', // balloon - green
+                2: '#5555ff', // crab_star - blue
+                3: '#ffaa55', // dope - orange
+                4: '#ff55ff', // dope2 - pink
+                5: '#ffff55', // 1 - yellow
+                6: '#aa55ff', // 2 - purple
+                7: '#55ffff', // GnO5pmIWIAEL6p2 - cyan
+                8: '#ff8888', // GnY4gJlWIAA8sor - light red
+                9: '#ffbb55', // photo_2025-03-04_13-11-38 - amber
+                10: '#aaffaa'  // gimme_a_code - light green
+            };
+            
+            // Fruit images
+            const fruitImages = [];
+            [
+                './flappy_crab.png', 
+                './balloon.png',
+                './crab_star.png', 
+                './dope.png', 
+                './dope2.png',
+                './1.png',
+                './2.png',
+                './GnO5pmIWIAEL6p2.jpg',
+                './GnY4gJlWIAA8sor.jpg',
+                './photo_2025-03-04_13-11-38.jpg',
+                './gimme_a_code.png'
+            ].forEach(src => {
+                const img = new Image();
+                img.src = src;
+                fruitImages.push(img);
+            });
+            
+            // Bomb image
+            const bombImage = new Image();
+            bombImage.src = './hat.png';
+            
+            // Slash effect
+            const slashImage = new Image();
+            slashImage.src = './-sac.png';
+
+            // Load high score from localStorage
+            function loadHighScore() {
+                const savedHighScore = localStorage.getItem('ninjaHighScore');
+                if (savedHighScore) {
+                    highScore = parseInt(savedHighScore);
+                    highScoreDisplay.textContent = highScore;
+                }
+            }
+
+            // Save high score to localStorage
+            function saveHighScore() {
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('ninjaHighScore', highScore);
+                    highScoreDisplay.textContent = highScore;
+                    isNewHighScore = true;
+                    
+                    // Add high score animation to the final score display
+                    finalScoreDisplay.classList.add('high-score-text');
+                    
+                    // Add "NEW HIGH SCORE!" text
+                    const newHighScoreText = document.createElement('div');
+                    newHighScoreText.textContent = "NEW HIGH SCORE!";
+                    newHighScoreText.classList.add('high-score-text');
+                    newHighScoreText.style.fontSize = '1.2rem';
+                    newHighScoreText.style.marginTop = '10px';
+                    
+                    // Insert after final score paragraph
+                    const finalScorePara = finalScoreDisplay.parentNode;
+                    finalScorePara.parentNode.insertBefore(newHighScoreText, finalScorePara.nextSibling);
+                    
+                    // Save to high scores list
+                    const scores = getHighScores();
+                    scores.push({
+                        score: score,
+                        date: new Date().toLocaleDateString()
+                    });
+                    
+                    // Sort scores in descending order
+                    scores.sort((a, b) => b.score - a.score);
+                    
+                    // Keep only top 10 scores
+                    if (scores.length > 10) {
+                        scores.length = 10;
+                    }
+                    
+                    // Save to localStorage
+                    localStorage.setItem('ninjaScores', JSON.stringify(scores));
+                }
+            }
+
+            // Get high scores list
+            function getHighScores() {
+                const scores = localStorage.getItem('ninjaScores');
+                return scores ? JSON.parse(scores) : [];
+            }
+
+            // Populate high scores list
+            function populateHighScores() {
+                const scoresList = document.getElementById('scoresList');
+                scoresList.innerHTML = '';
+                
+                const scores = getHighScores();
+                
+                if (scores.length === 0) {
+                    const noScores = document.createElement('div');
+                    noScores.className = 'no-scores';
+                    noScores.innerHTML = '<span>No scores yet!</span><p>Play the game to set your first high score!</p>';
+                    noScores.style.textAlign = 'center';
+                    noScores.style.padding = '20px';
+                    scoresList.appendChild(noScores);
+                    return;
+                }
+                
+                // Create header row
+                const headerRow = document.createElement('div');
+                headerRow.className = 'score-item header';
+                
+                const rankHeader = document.createElement('span');
+                rankHeader.textContent = 'Rank';
+                
+                const scoreHeader = document.createElement('span');
+                scoreHeader.textContent = 'Score';
+                
+                const dateHeader = document.createElement('span');
+                dateHeader.textContent = 'Date';
+                
+                headerRow.appendChild(rankHeader);
+                headerRow.appendChild(scoreHeader);
+                headerRow.appendChild(dateHeader);
+                
+                scoresList.appendChild(headerRow);
+                
+                // Add scores
+                scores.forEach((scoreData, index) => {
+                    const scoreItem = document.createElement('div');
+                    scoreItem.className = 'score-item';
+                    
+                    // Add special class for top 3 scores
+                    if (index < 3) {
+                        scoreItem.classList.add(`rank-${index + 1}`);
+                    }
+                    
+                    const rank = document.createElement('span');
+                    rank.textContent = `${index + 1}`;
+                    
+                    const scoreValue = document.createElement('span');
+                    scoreValue.textContent = scoreData.score.toLocaleString();
+                    
+                    const date = document.createElement('span');
+                    date.textContent = scoreData.date;
+                    
+                    scoreItem.appendChild(rank);
+                    scoreItem.appendChild(scoreValue);
+                    scoreItem.appendChild(date);
+                    
+                    scoresList.appendChild(scoreItem);
+                });
+            }
+
+            // Update lives display
+            function updateLivesDisplay() {
+                livesContainer.innerHTML = '';
+                
+                // Add heart icon before hearts
+                const heartIcon = document.createElement('div');
+                heartIcon.className = 'heart-icon';
+                heartIcon.innerHTML = '❤️';
+                heartIcon.style.marginRight = '5px';
+                heartIcon.style.fontSize = '1.2rem';
+                livesContainer.appendChild(heartIcon);
+                
+                // Add hearts
+                for (let i = 0; i < maxLives; i++) {
+                    const heart = document.createElement('div');
+                    if (i < lives) {
+                        heart.className = 'life-heart';
+                    } else {
+                        heart.className = 'life-heart empty';
+                    }
+                    livesContainer.appendChild(heart);
+                }
+            }
+            
+            // Show life lost indicator
+            function showLifeLostIndicator() {
+                const lifeText = document.createElement('div');
+                lifeText.textContent = "-1 LIFE!";
+                lifeText.className = 'life-lost-indicator';
+                document.querySelector('.game-container').appendChild(lifeText);
+                
+                // Remove the element after animation completes
+                setTimeout(() => {
+                    if(lifeText.parentNode) {
+                        lifeText.parentNode.removeChild(lifeText);
+                    }
+                }, 2000);
+            }
+
+            // Show splash screen animation
+            function showSplashScreen() {
+                splashScreen.style.display = 'flex';
+                
+                // Hide other screens first to make sure they don't show
+                mainMenu.style.display = 'none';
+                gameArea.classList.add('hidden');
+                highScoresScreen.classList.add('hidden');
+                gameOverScreen.classList.add('hidden');
+                countdown.classList.add('hidden');
+                
+                // Play ninja yell sound after a delay
+                setTimeout(() => {
+                    ninjaYellSound.play().catch(e => console.log("Audio error:", e));
+                }, 1000);
+                
+                // Hide splash screen after animation and show main menu
+                setTimeout(() => {
+                    splashScreen.style.display = 'none';
+                    mainMenu.style.display = 'flex';
+                    gameArea.classList.add('hidden');
+                    highScoresScreen.classList.add('hidden');
+                    gameOverScreen.classList.add('hidden');
+                    countdown.classList.add('hidden');
+                }, 3000);
+            }
+
+            // Start countdown
+            function startCountdown() {
+                let count = 3;
+                countdown.classList.remove('hidden');
+                countdownNumber.textContent = count;
+                
+                // Clear any previous styles
+                countdownNumber.style = '';
+                
+                // No box or border, just the text
+                
+                countdownFruits = [];
+                
+                // Create countdown fruits that will be sliced at GO!
+                for (let i = 0; i < 5; i++) {
+                    const type = Math.floor(Math.random() * fruitImages.length);
+                    const size = fruitSize * 1.5; // Make countdown fruits 50% larger
+                    const x = canvas.width * (0.2 + i * 0.15);
+                    const y = canvas.height + size;
+                    const vx = (Math.random() * 2 - 1) * 2;
+                    const vy = -18 - Math.random() * 5; // Higher jump
+                    
+                    countdownFruits.push({
+                        x,
+                        y,
+                        vx,
+                        vy,
+                        size,
+                        type,
+                        rotation: Math.random() * Math.PI * 2,
+                        rotationSpeed: (Math.random() * 0.1 - 0.05) * Math.PI,
+                        sliced: false,
+                        isBomb: false,
+                        sliceTime: 0,
+                        halfOne: {
+                            offsetX: 0,
+                            offsetY: 0,
+                            rotation: 0,
+                            rotationSpeed: -0.05,
+                            vx: 0,
+                            vy: 0
+                        },
+                        halfTwo: {
+                            offsetX: 0,
+                            offsetY: 0,
+                            rotation: 0,
+                            rotationSpeed: 0.05,
+                            vx: 0,
+                            vy: 0
+                        }
+                    });
+                }
+                
+                // Animate countdown fruits
+                const countdownCanvas = document.createElement('canvas');
+                countdownCanvas.width = canvas.width;
+                countdownCanvas.height = canvas.height;
+                countdown.appendChild(countdownCanvas);
+                const countdownCtx = countdownCanvas.getContext('2d');
+                countdownCtx.imageSmoothingEnabled = false;
+                
+                function updateCountdownFruits() {
+                    countdownCtx.clearRect(0, 0, countdownCanvas.width, countdownCanvas.height);
+                    
+                    // Update fruit positions
+                    for (let i = 0; i < countdownFruits.length; i++) {
+                        const fruit = countdownFruits[i];
+                        fruit.x += fruit.vx;
+                        fruit.y += fruit.vy;
+                        fruit.vy += gravity;
+                        fruit.rotation += fruit.rotationSpeed;
+                        
+                        // Draw fruit
+                        countdownCtx.save();
+                        countdownCtx.translate(fruit.x, fruit.y);
+                        countdownCtx.rotate(fruit.rotation);
+                        
+                        if (fruit.sliced) {
+                            // Draw sliced fruit halves
+                            // Left half
+                            countdownCtx.save();
+                            countdownCtx.translate(fruit.halfOne.offsetX, fruit.halfOne.offsetY);
+                            countdownCtx.rotate(fruit.halfOne.rotation);
+                            
+                            countdownCtx.beginPath();
+                            countdownCtx.rect(-fruit.size / 2, -fruit.size / 2, fruit.size / 2, fruit.size);
+                            countdownCtx.clip();
+                            
+                            countdownCtx.drawImage(
+                                fruitImages[fruit.type],
+                                -fruit.size / 2,
+                                -fruit.size / 2,
+                                fruit.size,
+                                fruit.size
+                            );
+                            countdownCtx.restore();
+                            
+                            // Right half
+                            countdownCtx.save();
+                            countdownCtx.translate(fruit.halfTwo.offsetX, fruit.halfTwo.offsetY);
+                            countdownCtx.rotate(fruit.halfTwo.rotation);
+                            
+                            countdownCtx.beginPath();
+                            countdownCtx.rect(0, -fruit.size / 2, fruit.size / 2, fruit.size);
+                            countdownCtx.clip();
+                            
+                            countdownCtx.drawImage(
+                                fruitImages[fruit.type],
+                                -fruit.size / 2,
+                                -fruit.size / 2,
+                                fruit.size,
+                                fruit.size
+                            );
+                            countdownCtx.restore();
+                            
+                            // Update sliced halves
+                            fruit.halfOne.offsetX += fruit.halfOne.vx;
+                            fruit.halfOne.offsetY += fruit.halfOne.vy;
+                            fruit.halfOne.vy += gravity;
+                            fruit.halfOne.rotation += fruit.halfOne.rotationSpeed;
+                            
+                            fruit.halfTwo.offsetX += fruit.halfTwo.vx;
+                            fruit.halfTwo.offsetY += fruit.halfTwo.vy;
+                            fruit.halfTwo.vy += gravity;
+                            fruit.halfTwo.rotation += fruit.halfTwo.rotationSpeed;
+                        } else {
+                            // Draw whole fruit
+                            countdownCtx.drawImage(
+                                fruitImages[fruit.type],
+                                -fruit.size / 2,
+                                -fruit.size / 2,
+                                fruit.size,
+                                fruit.size
+                            );
+                        }
+                        
+                        countdownCtx.restore();
+                    }
+                    
+                    if (count > 0 || countdownNumber.textContent === 'GO!') {
+                        requestAnimationFrame(updateCountdownFruits);
+                    } else {
+                        countdown.removeChild(countdownCanvas);
+                    }
+                }
+                
+                updateCountdownFruits();
+                
+                const countInterval = setInterval(() => {
+                    count--;
+                    
+                    if (count > 0) {
+                        countdownNumber.textContent = count;
+                        
+                        // Reset animation
+                        countdownNumber.style.animation = 'none';
+                        void countdownNumber.offsetWidth; // Trigger reflow
+                        countdownNumber.style.animation = 'countdownPulse 1s ease-in-out';
+                        
+                        if (soundEnabled) {
+                            countdownSound.currentTime = 0;
+                            countdownSound.play().catch(e => console.log("Audio error:", e));
+                        }
+                    } else {
+                        // Special styling for GO!
+                        countdownNumber.textContent = 'GO!';
+                        countdownNumber.style.color = '#ffcc00';
+                        
+                        // Reset animation
+                        countdownNumber.style.animation = 'none';
+                        void countdownNumber.offsetWidth; // Trigger reflow
+                        countdownNumber.style.animation = 'countdownPulse 1s ease-in-out';
+                        
+                        // Slice all fruits when GO! appears
+                        for (let i = 0; i < countdownFruits.length; i++) {
+                            const fruit = countdownFruits[i];
+                            if (!fruit.sliced) {
+                                fruit.sliced = true;
+                                fruit.sliceTime = 0;
+                                
+                                // Calculate slice direction
+                                const sliceSpeed = 3 + Math.random() * 2;
+                                const angle = Math.PI / 4 + Math.random() * (Math.PI / 2);
+                                const perpAngle = angle + Math.PI/2;
+                                
+                                // Apply velocity to halves
+                                fruit.halfOne.vx = -Math.cos(perpAngle) * sliceSpeed;
+                                fruit.halfOne.vy = -Math.sin(perpAngle) * sliceSpeed - 2;
+                                
+                                fruit.halfTwo.vx = Math.cos(perpAngle) * sliceSpeed;
+                                fruit.halfTwo.vy = Math.sin(perpAngle) * sliceSpeed - 2;
+                            }
+                        }
+                        
+                        if (soundEnabled) {
+                            ninjaYellSound.currentTime = 0;
+                            ninjaYellSound.play().catch(e => console.log("Audio error:", e));
+                            
+                            sliceSound.currentTime = 0;
+                            sliceSound.play().catch(e => console.log("Audio error:", e));
+                        }
+                        
+                        // Start game after countdown
+                        setTimeout(() => {
+                            countdown.classList.add('hidden');
+                            clearInterval(countInterval);
+                            startGame();
+                        }, 1000);
+                    }
+                }, 1000);
+            }
+            
+            // Start game
+            function startGame() {
+                // Hide menu and show game
+                mainMenu.classList.add('hidden');
+                gameArea.classList.remove('hidden');
+                
+                // Reset game variables
+                score = 0;
+                lives = 3;
+                gameRunning = true;
+                fruits = [];
+                slices = [];
+                combos = [];
+                particles = [];
+                
+                gameTime = 0;
+                fruitSpawnTimer = 0;
+                bombSpawnTimer = 0;
+                
+                mouseTrail = [];
+                
+                lastTimestamp = performance.now();
+                fruitSpawnTimer = 0;
+                bombSpawnTimer = 0;
+                
+                comboCount = 0;
+                comboTimer = 0;
+                comboMultiplier = 1;
+                comboMultiplierDisplay.innerText = 'x1';
+                
+                difficulty = 1;
+                scoreDisplay.innerText = '0';
+                
+                // Reset time remaining
+                gameTimeRemaining = 60;
+                document.getElementById('timeRemaining').innerText = gameTimeRemaining;
+                document.getElementById('timeRemaining').parentElement.classList.remove('time-warning');
+                
+                // Clear any existing game timer
+                if (gameTimerInterval) {
+                    clearInterval(gameTimerInterval);
+                }
+                
+                // Start game timer
+                gameTimerInterval = setInterval(() => {
+                    gameTimeRemaining--;
+                    document.getElementById('timeRemaining').innerText = gameTimeRemaining;
+                    
+                    // Warning animation when time is running low
+                    if (gameTimeRemaining <= 10) {
+                        document.getElementById('timeRemaining').parentElement.classList.add('time-warning');
+                    }
+                    
+                    // End game when time runs out
+                    if (gameTimeRemaining <= 0) {
+                        endGame();
+                    }
+                }, 1000);
+                
+                // Update lives display
+                updateLivesDisplay();
+                
+                // Start background music if enabled
+                if (musicEnabled) {
+                    bgMusic.currentTime = 0;
+                    bgMusic.volume = 0.5;
+                    bgMusic.play().catch(e => console.log("Music error:", e));
+                }
+                
+                // Start game loop
+                requestAnimationFrame(gameLoop);
+            }
+            
+            // End game
+            function endGame() {
+                gameRunning = false;
+                
+                // Clear the game timer
+                if (gameTimerInterval) {
+                    clearInterval(gameTimerInterval);
+                    gameTimerInterval = null;
+                }
+                
+                // Stop music
+                if (musicEnabled) {
+                    bgMusic.pause();
+                    bgMusic.currentTime = 0;
+                }
+                
+                // Play game over sound
+                if (soundEnabled) {
+                    gameOverSound.currentTime = 0;
+                    gameOverSound.play().catch(e => console.log("Game over sound error:", e));
+                }
+                
+                // Update high score if needed
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('ninjaHighScore', highScore);
+                    isNewHighScore = true;
+                } else {
+                    isNewHighScore = false;
+                }
+                
+                // Update final score display
+                finalScoreDisplay.innerText = score;
+                highScoreDisplay.innerText = highScore;
+                
+                // Highlight high score if it's a new one
+                if (isNewHighScore) {
+                    highScoreDisplay.classList.add('high-score-text');
+                } else {
+                    highScoreDisplay.classList.remove('high-score-text');
+                }
+                
+                // Show game over screen after a short delay
+                setTimeout(() => {
+                    gameOverScreen.classList.remove('hidden');
+                }, 1000);
+            }
+            
+            // Add particles
+            function addParticles(x, y, color, count) {
+                for (let i = 0; i < count; i++) {
+                    const size = 2 + Math.random() * 4;
+                    const speedX = (Math.random() - 0.5) * 3;
+                    const speedY = -Math.random() * 4 - 2;
+                    
+                    particles.push({
+                        x,
+                        y,
+                        size,
+                        color: color || '#ff33ff',
+                        speedX,
+                        speedY,
+                        alpha: 1,
+                        gravity: 0.12 + Math.random() * 0.08
+                    });
+                }
+            }
+            
+            // Spawn fruit with realistic arc motion
+            function spawnFruit() {
+                const type = Math.floor(Math.random() * fruitImages.length);
+                const size = fruitSize * 1.4; // Make fruits 40% larger
+                
+                // Start from bottom of screen with upward velocity
+                const x = Math.random() * (canvas.width - size);
+                const vx = (Math.random() * 2 - 1) * Math.min(maxVelocity * difficulty, 20);
+                const vy = -18 - Math.random() * 7 * difficulty; // Higher jump for regular fruits
+                const rotation = Math.random() * Math.PI * 2;
+                const rotationSpeed = (Math.random() * 0.1 - 0.05) * Math.PI;
+                
+                // Special fruit chance (10%)
+                const isSpecial = Math.random() < 0.1;
+                
+                // Bounce effect variables
+                const bounceHeight = 80; // Higher bounce
+                const bounceTime = 0;
+                
+                // Special fruit bonus type: 0 = double points, 1 = extra life, 2 = slowdown
+                const specialBonusType = Math.floor(Math.random() * 3);
+                
+                fruits.push({
+                    x,
+                    y: canvas.height + size / 2,
+                    vx,
+                    vy,
+                    size,
+                    type,
+                    rotation,
+                    rotationSpeed,
+                    sliced: false,
+                    isBomb: false,
+                    isSpecial: isSpecial,
+                    specialBonusType: specialBonusType,
+                    glowAmount: isSpecial ? 0.5 : 0,
+                    glowDir: 1,
+                    sliceTime: 0,
+                    bouncing: true,
+                    bounceHeight,
+                    bounceTime,
+                    halfOne: { // Left half
+                        offsetX: 0,
+                        offsetY: 0,
+                        rotation: 0,
+                        rotationSpeed: -0.05,
+                        vx: 0,
+                        vy: 0
+                    },
+                    halfTwo: { // Right half
+                        offsetX: 0,
+                        offsetY: 0,
+                        rotation: 0,
+                        rotationSpeed: 0.05,
+                        vx: 0,
+                        vy: 0
+                    }
+                });
+            }
+            
+            // Spawn bomb
+            function spawnBomb() {
+                const size = bombSize * 1.4; // Make bombs 40% larger
+                const x = Math.random() * (canvas.width - size);
+                const vx = (Math.random() * 2 - 1) * Math.min(maxVelocity * difficulty, 15);
+                const vy = -18 - Math.random() * 7 * difficulty; // Higher jump for bombs too
+                const rotation = Math.random() * Math.PI * 2;
+                const rotationSpeed = (Math.random() * 0.1 - 0.05) * Math.PI;
+                
+                // Bounce effect variables
+                const bounceHeight = 80; // Higher bounce
+                const bounceTime = 0;
+                
+                fruits.push({
+                    x,
+                    y: canvas.height + size / 2,
+                    vx,
+                    vy,
+                    size,
+                    rotation,
+                    rotationSpeed,
+                    sliced: false,
+                    isBomb: true,
+                    explosionTime: 0,
+                    explosionSize: 0,
+                    bouncing: true,
+                    bounceHeight,
+                    bounceTime
+                });
+            }
+            
+            // Add slash effect with enhanced effects for critical hits
+            function addSlash(x, y, angle, isCritical = false) {
+                slices.push({
+                    x,
+                    y,
+                    angle,
+                    size: isCritical ? 150 : 100, // Bigger slash for critical hits
+                    alpha: 1,
+                    time: 0,
+                    isCritical: isCritical
+                });
+                
+                // Add extra particles for critical hits
+                if (isCritical) {
+                    // Add spark particles
+                    for (let i = 0; i < 15; i++) {
+                        const speed = 5 + Math.random() * 10;
+                        const direction = angle + (Math.random() - 0.5) * Math.PI / 2;
+                        const size = 3 + Math.random() * 5;
+                        
+                        particles.push({
+                            x,
+                            y,
+                            size,
+                            color: '#ffffff',
+                            speedX: Math.cos(direction) * speed,
+                            speedY: Math.sin(direction) * speed,
+                            alpha: 1,
+                            gravity: 0.1,
+                            rotation: Math.random() * Math.PI * 2,
+                            rotationSpeed: (Math.random() - 0.5) * 0.2,
+                            isSpark: true
+                        });
+                    }
+                }
+            }
+            
+            // Add combo text
+            function addCombo(x, y, count) {
+                if (count < 2) return;
+                
+                // Adjust combo multiplier
+                comboMultiplier = Math.min(5, count);
+                comboMultiplierDisplay.textContent = 'x' + comboMultiplier;
+                
+                const text = count >= 5 ? 'SUPER COMBO!' : 
+                             count >= 3 ? 'COMBO x' + count + '!' : 
+                             'COMBO x' + count + '!';
+                             
+                const points = count * 10 * comboMultiplier;
+                
+                score += points;
+                scoreDisplay.textContent = score;
+                
+                // Play combo sound
+                comboSound.currentTime = 0;
+                comboSound.play().catch(e => console.log("Combo sound error:", e));
+                
+                combos.push({
+                    x,
+                    y,
+                    text,
+                    points: '+' + points,
+                    time: 0
+                });
+            }
+            
+            // Handle mouse movement
+            canvas.addEventListener('mousemove', e => {
+                const rect = canvas.getBoundingClientRect();
+                lastMouseX = mouseX;
+                lastMouseY = mouseY;
+                mouseX = e.clientX - rect.left;
+                mouseY = e.clientY - rect.top;
+                
+                // Add point to trail
+                mouseTrail.push({x: mouseX, y: mouseY});
+                if (mouseTrail.length > trailLength) {
+                    mouseTrail.shift();
+                }
+                
+                if (gameRunning && mouseTrail.length > 1) {
+                    const dx = mouseX - lastMouseX;
+                    const dy = mouseY - lastMouseY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > 10) {
+                        const angle = Math.atan2(dy, dx);
+                        checkSlice(angle);
+                    }
+                }
+            });
+            
+            // Handle touch events for mobile
+            canvas.addEventListener('touchmove', e => {
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                const touch = e.touches[0];
+                
+                lastMouseX = mouseX;
+                lastMouseY = mouseY;
+                mouseX = touch.clientX - rect.left;
+                mouseY = touch.clientY - rect.top;
+                
+                // Add point to trail
+                mouseTrail.push({x: mouseX, y: mouseY});
+                if (mouseTrail.length > trailLength) {
+                    mouseTrail.shift();
+                }
+                
+                if (gameRunning && mouseTrail.length > 1) {
+                    const dx = mouseX - lastMouseX;
+                    const dy = mouseY - lastMouseY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance > 5) {
+                        const angle = Math.atan2(dy, dx);
+                        checkSlice(angle);
+                    }
+                }
+            });
+            
+            // Check for slices
+            function checkSlice(angle) {
+                if (mouseTrail.length < 2) return;
+                
+                let fruitSliced = 0;
+                let currentTime = performance.now();
+                
+                // Calculate mouse move speed
+                if (lastMouseMoveTime > 0) {
+                    const dx = mouseX - lastMouseX;
+                    const dy = mouseY - lastMouseY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const timeDiff = currentTime - lastMouseMoveTime;
+                    
+                    mouseMoveSpeed = distance / timeDiff * 16; // Normalized to pixels per frame
+                }
+                
+                lastMouseMoveTime = currentTime;
+                
+                // Check each fruit
+                for (let i = fruits.length - 1; i >= 0; i--) {
+                    const fruit = fruits[i];
+                    if (fruit.sliced) continue;
+                    
+                    // Check if mouse trail intersects with fruit
+                    for (let j = 1; j < mouseTrail.length; j++) {
+                        const p1 = mouseTrail[j-1];
+                        const p2 = mouseTrail[j];
+                        
+                        // Line to circle collision check
+                        const result = lineCircleIntersect(
+                            p1.x, p1.y, p2.x, p2.y, 
+                            fruit.x, fruit.y, fruit.isSpecial ? fruit.size : fruit.size / 2
+                        );
+                        
+                        if (result) {
+                            if (fruit.isBomb) {
+                                // Bomb hit - lose a life
+                                lives--;
+                                updateLivesDisplay();
+                                
+                                // Play bomb sound
+                                if (soundEnabled) {
+                                    bombSound.currentTime = 0;
+                                    bombSound.play().catch(e => console.log("Bomb sound error:", e));
+                                }
+                                
+                                // Add explosion effect
+                                fruit.sliced = true;
+                                fruit.explosionTime = 0;
+                                
+                                // Show life lost indicator
+                                showLifeLostIndicator();
+                                
+                                // Add screen shake effect
+                                screenShaking = true;
+                                setTimeout(() => { screenShaking = false; }, 500);
+                                
+                                // Add blood splash for dramatic effect
+                                addBloodSplash(fruit.x, fruit.y);
+                                
+                                // Break after hitting bomb
+                                break;
+                            } else {
+                                // Normal fruit slice
+                                const isCritical = mouseMoveSpeed > criticalHitThreshold;
+                                
+                                // Add to score based on fruit type and combo
+                                let basePoints = 10;
+                                if (fruit.isSpecial) {
+                                    // Special fruits worth more
+                                    basePoints = 25;
+                                    
+                                    // Apply special bonus
+                                    applySpecialBonus(fruit.specialBonusType);
+                                }
+                                
+                                // Critical hit bonus
+                                if (isCritical) {
+                                    basePoints += criticalHitBonus;
+                                }
+                                
+                                // Apply combo multiplier
+                                const points = basePoints * comboMultiplier;
+                                score += points;
+                                scoreDisplay.innerText = score;
+                                
+                                // Slice the fruit
+                                sliceFruit(i, angle, isCritical);
+                                
+                                // Update combo
+                                comboCount++;
+                                comboTimer = comboTimeout;
+                                
+                                if (comboCount > 1) {
+                                    // Calculate combo multiplier (maxes out at x8)
+                                    comboMultiplier = Math.min(1 + Math.floor(comboCount / 2), 8);
+                                    comboMultiplierDisplay.innerText = 'x' + comboMultiplier;
+                                    
+                                    // Show combo text on screen
+                                    if (comboCount % 2 === 0 || comboCount >= 10) {
+                                        showComboText(fruit.x, fruit.y, comboCount);
+                                    }
+                                    
+                                    // Play combo sound
+                                    if (soundEnabled && comboCount % 2 === 0) {
+                                        comboSound.currentTime = 0;
+                                        comboSound.play().catch(e => console.log("Combo sound error:", e));
+                                    }
+                                    
+                                    // Add screen shake for big combos
+                                    if (comboCount >= 5) {
+                                        screenShaking = true;
+                                        setTimeout(() => { screenShaking = false; }, 300);
+                                    }
+                                }
+                                
+                                fruitSliced++;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                // Update combo counter
+                if (fruitSliced > 0) {
+                    comboCount += fruitSliced;
+                    comboTimer = 0;
+                    
+                    // Show combo if multiple fruits sliced
+                    if (comboCount >= 2) {
+                        addCombo(mouseX, mouseY, comboCount);
+                    }
+                }
+            }
+            
+            // Line to circle intersection for precise slicing
+            function lineCircleIntersect(x1, y1, x2, y2, cx, cy, r) {
+                // Vector from point 1 to point 2
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+                const lineLengthSq = dx * dx + dy * dy;
+                
+                // Vector from point 1 to circle center
+                const fx = cx - x1;
+                const fy = cy - y1;
+                
+                // Projection of circle center onto line vector (normalized)
+                const t = (fx * dx + fy * dy) / lineLengthSq;
+                
+                // Clamp t to the line segment
+                const clampedT = Math.max(0, Math.min(1, t));
+                
+                // Closest point on the line to the circle center
+                const closestX = x1 + clampedT * dx;
+                const closestY = y1 + clampedT * dy;
+                
+                // Distance from closest point to circle center
+                const distanceX = closestX - cx;
+                const distanceY = closestY - cy;
+                const distanceSq = distanceX * distanceX + distanceY * distanceY;
+                
+                // Check if this distance is less than the radius
+                return distanceSq <= r * r;
+            }
+            
+            // Slice fruit with physics and effects
+            function sliceFruit(index, angle, isCritical) {
+                const fruit = fruits[index];
+                
+                // Mark fruit as sliced
+                fruit.sliced = true;
+                fruit.sliceTime = 0;
+                
+                // Play slice sound
+                if (soundEnabled) {
+                    sliceSound.currentTime = 0;
+                    sliceSound.play().catch(e => console.log("Slice sound error:", e));
+                    
+                    // Play critical hit sound
+                    if (isCritical) {
+                        criticalSound.currentTime = 0;
+                        criticalSound.play().catch(e => console.log("Critical sound error:", e));
+                    }
+                    
+                    // For sword swoosh effect
+                    swooshSound.currentTime = 0;
+                    swooshSound.play().catch(e => console.log("Swoosh sound error:", e));
+                }
+                
+                // Calculate slice direction and force
+                const sliceSpeed = 2 + Math.random() * 2;
+                const perpAngle = angle + Math.PI/2;
+                
+                // Apply velocity to fruit halves
+                fruit.halfOne.vx = -Math.cos(perpAngle) * sliceSpeed + fruit.vx * 0.3;
+                fruit.halfOne.vy = -Math.sin(perpAngle) * sliceSpeed - 2 + fruit.vy * 0.3;
+                
+                fruit.halfTwo.vx = Math.cos(perpAngle) * sliceSpeed + fruit.vx * 0.3;
+                fruit.halfTwo.vy = Math.sin(perpAngle) * sliceSpeed - 2 + fruit.vy * 0.3;
+                
+                // Add slash effect at the slice position
+                addSlash(fruit.x, fruit.y, angle, isCritical);
+                
+                // Add juice particles
+                let particleColor = fruitColors[fruit.type] || '#ff33ff';
+                let particleCount = Math.min(12, 15); // Limit to 15 for performance
+                
+                // Special fruits have different particle effects
+                if (fruit.isSpecial) {
+                    particleColor = '#ffcc00';
+                    particleCount = Math.min(20, 15); // Limit to 15 for performance
+                }
+                
+                // For critical hits, add extra particles
+                if (isCritical) {
+                    particleCount = Math.min(particleCount + 5, 15);
+                }
+                
+                addParticles(fruit.x, fruit.y, particleColor, particleCount);
+                
+                // Add pixelated splash effects
+                for (let i = 0; i < Math.min(8, 15 - particleCount); i++) {
+                    const splashAngle = Math.random() * Math.PI * 2;
+                    const splashSpeed = 1 + Math.random() * 3;
+                    const splashSize = 5 + Math.random() * 10;
+                    
+                    // Pixelated splash effect
+                    const splashType = Math.floor(Math.random() * 3); // 0, 1, or 2 for variety
+                    const splashX = fruit.x;
+                    const splashY = fruit.y;
+                    
+                    slices.push({
+                        x: splashX,
+                        y: splashY,
+                        vx: Math.cos(splashAngle) * splashSpeed,
+                        vy: Math.sin(splashAngle) * splashSpeed - 2,
+                        size: splashSize,
+                        angle: splashAngle,
+                        alpha: 1,
+                        time: 0,
+                        isSplash: true,
+                        splashType: splashType,
+                        color: fruit.isSpecial ? '#ffcc00' : fruitColors[fruit.type] || '#ff33ff'
+                    });
+                }
+                
+                // Add score
+                let pointsEarned = 10;
+                
+                // Critical hit bonus
+                if (isCritical) {
+                    pointsEarned += criticalHitBonus;
+                    
+                    // Show critical hit text
+                    const criticalText = document.createElement('div');
+                    criticalText.className = 'critical-text';
+                    criticalText.textContent = 'CRITICAL!';
+                    criticalText.style.left = fruit.x + 'px';
+                    criticalText.style.top = (fruit.y - 30) + 'px';
+                    document.querySelector('.game-container').appendChild(criticalText);
+                    
+                    // Remove the element after animation completes
+                    setTimeout(() => {
+                        if (criticalText.parentNode) {
+                            criticalText.parentNode.removeChild(criticalText);
+                        }
+                    }, 1000);
+                }
+                
+                // Handle special fruit bonuses
+                if (fruit.isSpecial) {
+                    // Apply special bonus based on type
+                    switch(fruit.specialBonusType) {
+                        case 0: // Double points
+                            pointsEarned *= 2;
+                            
+                            // Show bonus text
+                            const doublePointsText = document.createElement('div');
+                            doublePointsText.className = 'bonus-text double-points';
+                            doublePointsText.textContent = 'DOUBLE POINTS!';
+                            doublePointsText.style.left = fruit.x + 'px';
+                            doublePointsText.style.top = (fruit.y - 40) + 'px';
+                            document.querySelector('.game-container').appendChild(doublePointsText);
+                            
+                            // Remove the element after animation completes
+                            setTimeout(() => {
+                                if (doublePointsText.parentNode) {
+                                    doublePointsText.parentNode.removeChild(doublePointsText);
+                                }
+                            }, 1500);
+                            
+                            if (soundEnabled) {
+                                bonusSound.currentTime = 0;
+                                bonusSound.play().catch(e => console.log("Bonus sound error:", e));
+                            }
+                            break;
+                            
+                        case 1: // Extra life (if below max)
+                            if (lives < maxLives) {
+                                lives++;
+                                updateLivesDisplay();
+                                
+                                // Show bonus text
+                                const extraLifeText = document.createElement('div');
+                                extraLifeText.className = 'bonus-text extra-life';
+                                extraLifeText.textContent = '+1 LIFE!';
+                                extraLifeText.style.left = fruit.x + 'px';
+                                extraLifeText.style.top = (fruit.y - 40) + 'px';
+                                document.querySelector('.game-container').appendChild(extraLifeText);
+                                
+                                // Remove the element after animation completes
+                                setTimeout(() => {
+                                    if (extraLifeText.parentNode) {
+                                        extraLifeText.parentNode.removeChild(extraLifeText);
+                                    }
+                                }, 1500);
+                                
+                                if (soundEnabled) {
+                                    extraLifeSound.currentTime = 0;
+                                    extraLifeSound.play().catch(e => console.log("Extra life sound error:", e));
+                                }
+                            } else {
+                                // If already at max lives, give bonus points instead
+                                pointsEarned += 30;
+                            }
+                            break;
+                            
+                        case 2: // Slowdown
+                            slowdownActive = true;
+                            slowdownTimer = 0;
+                            
+                            // Show bonus text
+                            const slowdownText = document.createElement('div');
+                            slowdownText.className = 'bonus-text slowdown';
+                            slowdownText.textContent = 'SLOWDOWN!';
+                            slowdownText.style.left = fruit.x + 'px';
+                            slowdownText.style.top = (fruit.y - 40) + 'px';
+                            document.querySelector('.game-container').appendChild(slowdownText);
+                            
+                            // Remove the element after animation completes
+                            setTimeout(() => {
+                                if (slowdownText.parentNode) {
+                                    slowdownText.parentNode.removeChild(slowdownText);
+                                }
+                            }, 1500);
+                            
+                            if (soundEnabled) {
+                                slowdownSound.currentTime = 0;
+                                slowdownSound.play().catch(e => console.log("Slowdown sound error:", e));
+                            }
+                            break;
+                    }
+                }
+                
+                // Add base score + special
+                score += pointsEarned;
+                scoreDisplay.textContent = score;
+                
+                // Reset combo timer
+                comboTimer = 0;
+            }
+            
+            // Update game state with delta time
+            function update(timestamp) {
+                // Calculate delta time for smooth animation
+                deltaTime = timestamp - lastTimestamp;
+                lastTimestamp = timestamp;
+                
+                // Clamp delta time to avoid huge jumps if tab is inactive
+                deltaTime = Math.min(deltaTime, 50);
+                
+                // Update game time
+                gameTime += deltaTime;
+                
+                // Adjust difficulty
+                const difficultyIncreaseInterval = 30000; // 30 seconds
+                difficultyLevel = 1 + Math.floor(gameTime / difficultyIncreaseInterval);
+                
+                // Handle slowdown effect
+                if (slowdownActive) {
+                    slowdownTimer += deltaTime;
+                    if (slowdownTimer >= slowdownDuration) {
+                        slowdownActive = false;
+                        slowdownTimer = 0;
+                    }
+                    
+                    // Difficulty is halved during slowdown
+                    difficulty = Math.max(0.5, (1 + Math.min(gameTime / 60000, 2)) / 2);
+                } else {
+                    difficulty = 1 + Math.min(gameTime / 60000, 2); // Max difficulty after 1 minute
+                }
+                
+                // Update combo timer
+                comboTimer += deltaTime;
+                if (comboTimer > comboTimeout) {
+                    if (comboCount >= 2) {
+                        comboCount = 0;
+                        comboMultiplier = 1;
+                        comboMultiplierDisplay.textContent = 'x1';
+                    }
+                }
+                
+                // Spawn fruit with increasing frequency based on difficulty
+                fruitSpawnTimer += deltaTime;
+                const fruitSpawnInterval = fruitSpawnBaseInterval / difficulty;
+                if (fruitSpawnTimer >= fruitSpawnInterval) {
+                    spawnFruit();
+                    fruitSpawnTimer = 0;
+                }
+                
+                // Spawn bomb with increasing frequency based on difficulty
+                bombSpawnTimer += deltaTime;
+                const bombSpawnInterval = bombSpawnBaseInterval / Math.max(1, difficulty - 0.3);
+                if (bombSpawnTimer >= bombSpawnInterval) {
+                    spawnBomb();
+                    bombSpawnTimer = 0;
+                }
+                
+                // Update fruits
+                for (let i = fruits.length - 1; i >= 0; i--) {
+                    const fruit = fruits[i];
+                    
+                    // Handle bouncing effect when fruit first appears
+                    if (fruit.bouncing) {
+                        fruit.bounceTime += deltaTime;
+                        
+                        if (fruit.bounceTime < 300) {
+                            // Apply initial bounce
+                            const bounceProgress = fruit.bounceTime / 300;
+                            const bounceOffset = Math.sin(bounceProgress * Math.PI) * fruit.bounceHeight;
+                            
+                            // Only move up during bounce, keep normal physics otherwise
+                            fruit.y = canvas.height + fruit.size / 2 - bounceOffset;
+                            
+                            // Only update rotation during bounce
+                            fruit.rotation += fruit.rotationSpeed * (deltaTime / 16);
+                            
+                            // Skip rest of physics update during bounce
+                            continue;
+                        } else {
+                            // Bounce complete, switch to normal physics
+                            fruit.bouncing = false;
+                            
+                            // Apply adjusted initial velocity
+                            fruit.vy = fruit.vy * 0.8;
+                        }
+                    }
+                    
+                    // Update position with gravity
+                    fruit.x += fruit.vx * (deltaTime / 16); // Normalize for 60fps
+                    fruit.y += fruit.vy * (deltaTime / 16);
+                    fruit.vy += gravity * (deltaTime / 16);
+                    fruit.rotation += fruit.rotationSpeed * (deltaTime / 16);
+                    
+                    // Special fruit glow effect
+                    if (fruit.isSpecial) {
+                        fruit.glowAmount += 0.03 * fruit.glowDir * (deltaTime / 16);
+                        if (fruit.glowAmount > 1) {
+                            fruit.glowAmount = 1;
+                            fruit.glowDir = -1;
+                        } else if (fruit.glowAmount < 0.5) {
+                            fruit.glowAmount = 0.5;
+                            fruit.glowDir = 1;
+                        }
+                    }
+                    
+                    // Handle sliced fruit physics
+                    if (fruit.sliced) {
+                        fruit.sliceTime += deltaTime;
+                        
+                        if (fruit.isBomb) {
+                            // Update bomb explosion
+                            fruit.explosionTime += deltaTime;
+                            fruit.explosionSize = Math.min(200, fruit.explosionTime / 2);
+                            
+                            // Remove bomb after explosion animation
+                            if (fruit.explosionTime > 500) {
+                                fruits.splice(i, 1);
+                            }
+                        } else {
+                            // Update halves positions with gravity
+                            fruit.halfOne.offsetX += fruit.halfOne.vx * (deltaTime / 16);
+                            fruit.halfOne.offsetY += fruit.halfOne.vy * (deltaTime / 16);
+                            fruit.halfOne.vy += gravity * (deltaTime / 16);
+                            fruit.halfOne.rotation += fruit.halfOne.rotationSpeed * (deltaTime / 16);
+                            
+                            fruit.halfTwo.offsetX += fruit.halfTwo.vx * (deltaTime / 16);
+                            fruit.halfTwo.offsetY += fruit.halfTwo.vy * (deltaTime / 16);
+                            fruit.halfTwo.vy += gravity * (deltaTime / 16);
+                            fruit.halfTwo.rotation += fruit.halfTwo.rotationSpeed * (deltaTime / 16);
+                            
+                            // Slow down horizontal speed
+                            fruit.halfOne.vx *= 0.98;
+                            fruit.halfTwo.vx *= 0.98;
+                            
+                            // Remove after falling below screen
+                            if (fruit.y + Math.max(fruit.halfOne.offsetY, fruit.halfTwo.offsetY) > canvas.height + fruit.size * 2) {
+                                fruits.splice(i, 1);
+                            }
+                        }
+                    } else {
+                        // Check if fruit is offscreen (missed)
+                        if (fruit.y > canvas.height + fruit.size) {
+                            if (!fruit.isBomb) {
+                                // Lose a life for missed fruit
+                                lives--;
+                                updateLivesDisplay();
+                                
+                                if (lives <= 0) {
+                                    endGame();
+                                    return;
+                                }
+                            }
+                            fruits.splice(i, 1);
+                        }
+                    }
+                }
+                
+                // Update slices
+                for (let i = slices.length - 1; i >= 0; i--) {
+                    const slice = slices[i];
+                    slice.time += deltaTime;
+                    
+                    if (slice.isSplash) {
+                        // Update splash positions with gravity
+                        slice.x += slice.vx * (deltaTime / 16);
+                        slice.y += slice.vy * (deltaTime / 16);
+                        slice.vy += gravity * 0.5 * (deltaTime / 16);
+                        slice.alpha = 1 - slice.time / 800;
+                        
+                        if (slice.time > 800) {
+                            slices.splice(i, 1);
+                        }
+                    } else {
+                        // Fade out normal slice effects
+                        slice.alpha = 1 - slice.time / 300;
+                        
+                        if (slice.time > 300) {
+                            slices.splice(i, 1);
+                        }
+                    }
+                }
+                
+                // Update particles
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const particle = particles[i];
+                    
+                    particle.x += particle.speedX * (deltaTime / 16);
+                    particle.y += particle.speedY * (deltaTime / 16);
+                    particle.speedY += particle.gravity * (deltaTime / 16);
+                    particle.alpha = 1 - (particle.speedY + 2) / 10;
+                    
+                    if (particle.alpha <= 0 || particle.y > canvas.height) {
+                        particles.splice(i, 1);
+                    }
+                }
+                
+                // Update combos
+                for (let i = combos.length - 1; i >= 0; i--) {
+                    const combo = combos[i];
+                    combo.time += deltaTime;
+                    combo.y -= 1 * (deltaTime / 16);
+                    
+                    if (combo.time > 1000) {
+                        combos.splice(i, 1);
+                    }
+                }
+            }
+            
+            // Render game
+            function render() {
+                // Apply screen shake effect to canvas if needed
+                if (screenShaking) {
+                    const shakeX = (Math.random() - 0.5) * 10;
+                    const shakeY = (Math.random() - 0.5) * 10;
+                    canvas.style.transform = `translate(${shakeX}px, ${shakeY}px)`;
+                } else {
+                    canvas.style.transform = 'translate(0, 0)';
+                }
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw retro grid background
+                drawRetroGrid();
+                
+                // Draw mouse trail with retro effect
+                if (mouseTrail.length > 1) {
+                    // Main trail
+                    ctx.beginPath();
+                    ctx.moveTo(mouseTrail[0].x, mouseTrail[0].y);
+                    
+                    for (let i = 1; i < mouseTrail.length; i++) {
+                        ctx.lineTo(mouseTrail[i].x, mouseTrail[i].y);
+                    }
+                    
+                    // Pixelated retro blade style
+                    ctx.lineCap = 'square';
+                    ctx.lineJoin = 'miter';
+                    
+                    // Outer glow - bright pink
+                    ctx.strokeStyle = '#ff33ff';
+                    ctx.lineWidth = 5;
+                    ctx.stroke();
+                    
+                    // Inner trail - white core
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    
+                    // Pixel effect - add small squares along the trail
+                    ctx.fillStyle = '#ff99ff';
+                    for (let i = 0; i < mouseTrail.length; i+=2) {
+                        const point = mouseTrail[i];
+                        const size = 3;
+                        ctx.fillRect(point.x - size/2, point.y - size/2, size, size);
+                    }
+                }
+                
+                // Draw slices and splash effects
+                slices.forEach(slice => {
+                    ctx.save();
+                    
+                    if (slice.isSplash) {
+                        // Draw blood splash for bomb
+                        ctx.translate(slice.x, slice.y);
+                        ctx.rotate(slice.rotation);
+                        ctx.globalAlpha = slice.alpha;
+                        
+                        // Draw blood splash
+                        ctx.fillStyle = slice.color || '#ff0000';
+                        
+                        // Draw pixelated blood splash
+                        const pixelSize = slice.size / 8;
+                        for (let i = 0; i < 20; i++) {
+                            const angle = Math.random() * Math.PI * 2;
+                            const dist = Math.random() * slice.size / 2;
+                            const x = Math.cos(angle) * dist;
+                            const y = Math.sin(angle) * dist;
+                            const size = pixelSize * (0.5 + Math.random());
+                            
+                            ctx.fillRect(x - size/2, y - size/2, size, size);
+                        }
+                        
+                        // Add pixel glow effect
+                        ctx.globalCompositeOperation = 'screen';
+                        ctx.globalAlpha = slice.alpha * 0.5;
+                        ctx.fillStyle = '#ff5555';
+                        ctx.beginPath();
+                        ctx.arc(0, 0, slice.size/3, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.globalCompositeOperation = 'source-over';
+                    } else {
+                        // Draw normal slash effect
+                        ctx.translate(slice.x, slice.y);
+                        ctx.rotate(slice.angle);
+                        ctx.globalAlpha = slice.alpha;
+                        
+                        // Check if this is a critical hit
+                        if (slice.isCritical) {
+                            // Draw large, more dramatic slash for critical hits
+                            // First draw outer glow
+                            ctx.strokeStyle = '#ffcc00'; // Golden
+                            ctx.lineWidth = 20;
+                            ctx.lineCap = 'round';
+                            ctx.shadowColor = '#ffcc00';
+                            ctx.shadowBlur = 30;
+                            
+                            ctx.beginPath();
+                            ctx.moveTo(-slice.size / 2, 0);
+                            ctx.lineTo(slice.size / 2, 0);
+                            ctx.stroke();
+                            
+                            // Draw inner bright core
+                            ctx.shadowBlur = 0;
+                            ctx.strokeStyle = '#ffffff';
+                            ctx.lineWidth = 8;
+                            ctx.beginPath();
+                            ctx.moveTo(-slice.size / 2, 0);
+                            ctx.lineTo(slice.size / 2, 0);
+                            ctx.stroke();
+                            
+                            // Add extra spark effect
+                            ctx.globalCompositeOperation = 'screen';
+                            ctx.fillStyle = '#ffcc00';
+                            
+                            // Draw random sparkles
+                            for (let i = 0; i < 8; i++) {
+                                const sparkX = (Math.random() - 0.5) * slice.size;
+                                const sparkY = (Math.random() - 0.5) * 30;
+                                const sparkSize = 2 + Math.random() * 6;
+                                
+                                ctx.beginPath();
+                                ctx.arc(sparkX, sparkY, sparkSize, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                            
+                            ctx.globalCompositeOperation = 'source-over';
+                        } else {
+                            // Regular slash effect (as before)
+                            // Draw slash image
+                            ctx.drawImage(
+                                slashImage,
+                                -slice.size / 2,
+                                -slice.size / 4,
+                                slice.size,
+                                slice.size / 2
+                            );
+                            
+                            // Add retro glow effect
+                            ctx.globalCompositeOperation = 'screen';
+                            ctx.globalAlpha = slice.alpha * 0.7;
+                            ctx.fillStyle = '#ff33ff';
+                            ctx.fillRect(-slice.size / 2, -slice.size / 4, slice.size, slice.size / 2);
+                            ctx.globalCompositeOperation = 'source-over';
+                        }
+                    }
+                    
+                    ctx.restore();
+                });
+                
+                // Draw particles
+                particles.forEach(particle => {
+                    ctx.save();
+                    ctx.globalAlpha = particle.alpha;
+                    ctx.fillStyle = particle.color;
+                    
+                    // Draw square pixel instead of round particle
+                    ctx.fillRect(
+                        particle.x - particle.size / 2,
+                        particle.y - particle.size / 2,
+                        particle.size,
+                        particle.size
+                    );
+                    
+                    // Add small glow
+                    ctx.globalCompositeOperation = 'screen';
+                    ctx.globalAlpha = particle.alpha * 0.5;
+                    
+                    // Use appropriate glow color
+                    if (particle.color === '#ffcc00') {
+                        ctx.fillStyle = '#ffff00';
+                    } else if (particle.color.startsWith('#')) {
+                        // Lighten the color for glow effect
+                        ctx.fillStyle = particle.color.replace('#', '#ff');
+                    } else {
+                        ctx.fillStyle = '#ff99ff';
+                    }
+                    
+                    ctx.fillRect(
+                        particle.x - particle.size / 2 - 1,
+                        particle.y - particle.size / 2 - 1,
+                        particle.size + 2,
+                        particle.size + 2
+                    );
+                    
+                    ctx.restore();
+                });
+                
+                // Draw fruits and bombs
+                fruits.forEach(fruit => {
+                    ctx.save();
+                    
+                    // Add drop shadow for unsliced fruits
+                    if (!fruit.sliced) {
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                        ctx.shadowBlur = 15;
+                        ctx.shadowOffsetX = 5;
+                        ctx.shadowOffsetY = 5;
+                    }
+                    
+                    if (fruit.sliced) {
+                        // Remove shadow for sliced fruits
+                        ctx.shadowColor = 'transparent';
+                        
+                        if (fruit.isBomb) {
+                            // Draw bomb explosion
+                            ctx.save();
+                            ctx.translate(fruit.x, fruit.y);
+                            
+                            // Create explosion gradient with more vibrant colors
+                            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, fruit.explosionSize);
+                            gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                            gradient.addColorStop(0.2, 'rgba(255, 255, 0, 0.9)');
+                            gradient.addColorStop(0.4, 'rgba(255, 0, 0, 0.8)');
+                            gradient.addColorStop(0.6, 'rgba(255, 0, 0, 0.4)');
+                            gradient.addColorStop(0.8, 'rgba(50, 50, 50, 0.3)'); // Gray smoke
+                            ctx.rotate(fruit.rotation);
+                            
+                            // Brighter slice line
+                            ctx.strokeStyle = fruit.isSpecial ? '#ffcc00' : '#ff33ff';
+                            ctx.lineWidth = 3;
+                            ctx.beginPath();
+                            ctx.moveTo(-fruit.size / 2, 0);
+                            ctx.lineTo(fruit.size / 2, 0);
+                            ctx.stroke();
+                            
+                            // Glow effect
+                            ctx.strokeStyle = fruit.isSpecial ? 
+                                'rgba(255, 204, 0, 0.7)' : 
+                                'rgba(255, 51, 255, 0.7)';
+                            ctx.lineWidth = 6;
+                            ctx.stroke();
+                            
+                            // Inner highlight
+                            ctx.strokeStyle = '#ffffff';
+                            ctx.lineWidth = 1;
+                            ctx.stroke();
+                            
+                            ctx.restore();
+                        }
+                    } else {
+                        // Draw unsliced fruit/bomb
+                        ctx.save();
+                        ctx.translate(fruit.x, fruit.y);
+                        ctx.rotate(fruit.rotation);
+                        
+                        if (fruit.isBomb) {
+                            // Draw bomb image
+                            ctx.drawImage(
+                                bombImage,
+                                -fruit.size / 2,
+                                -fruit.size / 2,
+                                fruit.size,
+                                fruit.size
+                            );
+                            
+                            // Enhance bomb warning effect
+                            // Add pulsing red border and background
+                            ctx.globalAlpha = 0.5 + Math.sin(gameTime * 0.01) * 0.2;
+                            ctx.strokeStyle = '#ff0000';
+                            ctx.lineWidth = 4;
+                            ctx.strokeRect(-fruit.size / 2, -fruit.size / 2, fruit.size, fruit.size);
+                            
+                            // Pulsating glow
+                            ctx.globalAlpha = 0.3 + Math.sin(gameTime * 0.01) * 0.2;
+                            ctx.fillStyle = '#ff0000';
+                            ctx.fillRect(-fruit.size / 2, -fruit.size / 2, fruit.size, fruit.size);
+                            
+                            // Add danger text
+                            ctx.globalAlpha = 0.9;
+                            ctx.font = 'bold 14px "Press Start 2P"';
+                            ctx.fillStyle = '#ff0000';
+                            ctx.textAlign = 'center';
+                            ctx.fillText("BOMB!", 0, -fruit.size/2 - 10);
+                            
+                            ctx.globalAlpha = 1.0;
+                        } else {
+                            // Draw fruit image
+                            const img = fruitImages[fruit.type];
+                            ctx.imageSmoothingEnabled = false;
+                            ctx.drawImage(
+                                img,
+                                -fruit.size / 2,
+                                -fruit.size / 2,
+                                fruit.size,
+                                fruit.size
+                            );
+                            
+                            // Add special fruit glow effect
+                            if (fruit.isSpecial) {
+                                // Gold glow for special fruits
+                                ctx.globalCompositeOperation = 'screen';
+                                ctx.globalAlpha = fruit.glowAmount;
+                                ctx.fillStyle = '#ffcc00';
+                                ctx.fillRect(
+                                    -fruit.size / 2 - 5,
+                                    -fruit.size / 2 - 5,
+                                    fruit.size + 10,
+                                    fruit.size + 10
+                                );
+                                ctx.globalCompositeOperation = 'source-over';
+                                ctx.globalAlpha = 1.0;
+                                
+                                // Add pixel sparkles
+                                const sparkleCount = 3;
+                                for (let i = 0; i < sparkleCount; i++) {
+                                    const angle = (gameTime / 200 + i * (Math.PI * 2 / sparkleCount)) % (Math.PI * 2);
+                                    const distance = fruit.size / 2 + 5;
+                                    const x = Math.cos(angle) * distance;
+                                    const y = Math.sin(angle) * distance;
+                                    const sparkleSize = 2 + Math.sin(gameTime / 100 + i) * 1;
+                                    
+                                    ctx.fillStyle = '#ffff00';
+                                    ctx.fillRect(x - sparkleSize/2, y - sparkleSize/2, sparkleSize, sparkleSize);
+                                }
+                            } else {
+                                // Regular fruits get a subtle retro overlay
+                                ctx.globalCompositeOperation = 'source-atop';
+                                ctx.fillStyle = 'rgba(255, 51, 255, 0.15)';
+                                ctx.fillRect(-fruit.size / 2, -fruit.size / 2, fruit.size, fruit.size);
+                                ctx.globalCompositeOperation = 'source-over';
+                            }
+                        }
+                        
+                        ctx.restore();
+                    }
+                    
+                    ctx.restore();
+                });
+                
+                // Draw combo text
+                combos.forEach(combo => {
+                    ctx.save();
+                    
+                    // Fade out at the end
+                    ctx.globalAlpha = Math.min(1, 1 - (combo.time - 800) / 200);
+                    
+                    // Draw main combo text
+                    ctx.font = 'bold 16px "Press Start 2P"';
+                    ctx.fillStyle = '#ff33ff';
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 3;
+                    ctx.textAlign = 'center';
+                    
+                    // Draw text with retro effect
+                    ctx.strokeText(combo.text, combo.x, combo.y);
+                    ctx.fillText(combo.text, combo.x, combo.y);
+                    
+                    // Draw points text below
+                    if (combo.points) {
+                        ctx.font = 'bold 14px "Press Start 2P"';
+                        ctx.fillStyle = '#ffcc00';
+                        ctx.strokeText(combo.points, combo.x, combo.y + 20);
+                        ctx.fillText(combo.points, combo.x, combo.y + 20);
+                    }
+                    
+                    // Draw pixelated highlight with animation
+                    ctx.globalAlpha = 0.3 * Math.sin(gameTime * 0.01 + combo.time * 0.01);
+                    ctx.fillStyle = '#fff';
+                    ctx.fillText(combo.text, combo.x, combo.y);
+                    
+                    ctx.restore();
+                });
+                
+                // Add CRT effects
+                
+                // Draw scanlines
+                ctx.globalAlpha = 0.15;
+                for (let i = 0; i < canvas.height; i += 3) {
+                    ctx.fillStyle = '#33ff33';
+                    ctx.fillRect(0, i, canvas.width, 1);
+                }
+                ctx.globalAlpha = 1.0;
+                
+                // Draw horizontal sync line
+                const syncLinePosition = (gameTime / 20) % canvas.height;
+                ctx.globalAlpha = 0.3;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, syncLinePosition, canvas.width, 2);
+                ctx.globalAlpha = 1.0;
+                
+                // Draw CRT edge vignette
+                const gradient = ctx.createRadialGradient(
+                    canvas.width / 2, canvas.height / 2, canvas.height / 3,
+                    canvas.width / 2, canvas.height / 2, canvas.height
+                );
+                gradient.addColorStop(0, 'rgba(0,0,0,0)');
+                gradient.addColorStop(1, 'rgba(0,0,0,0.9)');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Add RGB color aberration effect
+                ctx.globalAlpha = 0.05;
+                ctx.globalCompositeOperation = 'screen';
+                // Red channel offset
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(2, 0, canvas.width, canvas.height);
+                // Blue channel offset
+                ctx.fillStyle = '#0000ff';
+                ctx.fillRect(-2, 0, canvas.width, canvas.height);
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.globalAlpha = 1.0;
+                
+                // Add a subtle screen flicker effect based on time
+                const flickerAmount = 0.03 + Math.random() * 0.02 * Math.sin(gameTime / 300);
+                ctx.globalAlpha = flickerAmount;
+                ctx.fillStyle = '#33ff33';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.globalAlpha = 1.0;
+            }
+            
+            // Game loop
+            function gameLoop(timestamp) {
+                if (gameRunning) {
+                    update(timestamp);
+                    render();
+                    requestAnimationFrame(gameLoop);
+                }
+            }
+            
+            // Button event listeners
+            startGameBtn.addEventListener('click', () => {
+                startCountdown();
+            });
+            
+            highScoresBtn.addEventListener('click', () => {
+                mainMenu.classList.add('hidden');
+                highScoresScreen.classList.remove('hidden');
+                
+                // Load and display high scores
+                populateHighScores();
+            });
+            
+            howToPlayBtn.addEventListener('click', () => {
+                mainMenu.classList.add('hidden');
+                howToPlayScreen.classList.remove('hidden');
+            });
+            
+            howToPlayBackBtn.addEventListener('click', () => {
+                howToPlayScreen.classList.add('hidden');
+                mainMenu.classList.remove('hidden');
+            });
+            
+            settingsBtn.addEventListener('click', () => {
+                mainMenu.classList.add('hidden');
+                settingsScreen.classList.remove('hidden');
+            });
+            
+            settingsBackBtn.addEventListener('click', () => {
+                settingsScreen.classList.add('hidden');
+                mainMenu.classList.remove('hidden');
+            });
+            
+            // Settings button
+            document.getElementById('settingsBtn').addEventListener('click', () => {
+                mainMenu.style.display = 'none';
+                document.getElementById('settingsScreen').classList.remove('hidden');
+                
+                // Set toggle states
+                document.getElementById('soundToggle').checked = soundEnabled;
+                document.getElementById('musicToggle').checked = musicEnabled;
+            });
+            
+            // Settings back button
+            document.getElementById('settingsBackBtn').addEventListener('click', () => {
+                document.getElementById('settingsScreen').classList.add('hidden');
+                mainMenu.style.display = 'flex';
+            });
+            
+            // Sound toggle
+            document.getElementById('soundToggle').addEventListener('change', function() {
+                soundEnabled = this.checked;
+                // Play a test sound if enabled
+                if (soundEnabled) {
+                    sliceSound.currentTime = 0;
+                    sliceSound.play().catch(e => console.log("Audio error:", e));
+                }
+            });
+            
+            // Music toggle
+            document.getElementById('musicToggle').addEventListener('change', function() {
+                musicEnabled = this.checked;
+                if (musicEnabled) {
+                    // Only play music if not already playing and in game
+                    if (gameRunning && bgMusic.paused) {
+                        bgMusic.play().catch(e => console.log("Audio error:", e));
+                    }
+                } else {
+                    bgMusic.pause();
+                }
+            });
+            
+            // Completely rewrite the back to menu button event listener
+            if (backToMenuBtn) {
+                backToMenuBtn.addEventListener('click', () => {
+                    highScoresScreen.classList.add('hidden');
+                    mainMenu.classList.remove('hidden');
+                });
+            }
+            
+            restartButton.addEventListener('click', () => {
+                gameOverScreen.classList.add('hidden');
+                startCountdown();
+            });
+            
+            mainMenuButton.addEventListener('click', () => {
+                gameOverScreen.classList.add('hidden');
+                gameArea.classList.add('hidden');
+                mainMenu.classList.remove('hidden');
+            });
+            
+            // Initialize the game when images are loaded
+            let imagesLoaded = 0;
+            const totalImages = fruitImages.length + 3; // +3 for bomb, slash, splash
+            
+            function checkAllImagesLoaded() {
+                imagesLoaded++;
+                if (imagesLoaded >= totalImages) {
+                    // All images loaded, show splash screen
+                    loadHighScore();
+                    showSplashScreen();
+                }
+            }
+            
+            // Load images and track loading
+            bombImage.onload = checkAllImagesLoaded;
+            slashImage.onload = checkAllImagesLoaded;
+            splashImg.onload = checkAllImagesLoaded;
+            
+            fruitImages.forEach(img => {
+                img.onload = checkAllImagesLoaded;
+            });
+            
+            // Initialize high scores in localStorage if not present
+            if (!localStorage.getItem('ninjaScores')) {
+                localStorage.setItem('ninjaScores', JSON.stringify([]));
+            }
+            
+            // Create floating fruits in the menu
+            function createFloatingFruits() {
+                const container = document.getElementById('floatingFruits');
+                container.innerHTML = '';
+                
+                // Create 15 floating fruits
+                for (let i = 0; i < 15; i++) {
+                    setTimeout(() => {
+                        if (!gameRunning) {
+                            const fruitEl = document.createElement('div');
+                            fruitEl.className = 'floating-fruit';
+                            
+                            // Random fruit image
+                            const img = document.createElement('img');
+                            const fruitType = Math.floor(Math.random() * fruitImages.length);
+                            img.src = fruitImages[fruitType].src;
+                            img.width = 30 + Math.random() * 20;
+                            
+                            fruitEl.appendChild(img);
+                            
+                            // Random position
+                            fruitEl.style.left = Math.random() * 80 + 10 + '%';
+                            fruitEl.style.bottom = '0';
+                            fruitEl.style.transform = `rotate(${Math.random() * 360}deg)`;
+                            
+                            container.appendChild(fruitEl);
+                            
+                            // Remove after animation completes
+                            setTimeout(() => {
+                                if (fruitEl.parentNode) {
+                                    fruitEl.parentNode.removeChild(fruitEl);
+                                }
+                            }, 4000);
+                        }
+                    }, i * 800); // Stagger creation
+                }
+                
+                // Repeat the creation process
+                if (!gameRunning) {
+                    setTimeout(createFloatingFruits, 12000);
+                }
+            }
+
+            // Draw retro grid background
+            function drawRetroGrid() {
+                const gridSize = 40; // Size of grid cells
+                const gridLineWidth = 1;
+                const gridColor = 'rgba(51, 0, 51, 0.8)'; // Dark purple
+                const gridHighlightColor = 'rgba(255, 51, 255, 0.3)'; // Neon pink
+                const backgroundColor = '#110011'; // Very dark purple
+                
+                // Draw background
+                ctx.fillStyle = backgroundColor;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Calculate perspective horizon
+                const horizonY = canvas.height * 0.5; // Horizon at middle of screen
+                
+                // Draw horizontal grid lines with perspective
+                ctx.lineWidth = gridLineWidth;
+                
+                // Major gridline halfway through (horizon line)
+                ctx.beginPath();
+                ctx.strokeStyle = gridHighlightColor;
+                ctx.moveTo(0, horizonY);
+                ctx.lineTo(canvas.width, horizonY);
+                ctx.stroke();
+                
+                // Draw vertical grid lines
+                const verticalLines = Math.ceil(canvas.width / gridSize) + 1;
+                
+                for (let i = 0; i <= verticalLines; i++) {
+                    const x = (i * gridSize + gameTime * 0.05) % canvas.width;
+                    
+                    ctx.beginPath();
+                    ctx.strokeStyle = gridColor;
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvas.height);
+                    ctx.stroke();
+                }
+                
+                // Draw horizontal grid lines with scroll effect
+                const horizontalLines = Math.ceil(canvas.height / gridSize) + 1;
+                
+                for (let i = 0; i <= horizontalLines; i++) {
+                    const y = (i * gridSize) % canvas.height;
+                    
+                    ctx.beginPath();
+                    ctx.strokeStyle = gridColor;
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                }
+                
+                // Kırmızı nokta kaldırıldı
+            }
+
+            // Add blood splash effect for dramatic bomb hits
+            function addBloodSplash(x, y) {
+                // Add multiple splash particles
+                for (let i = 0; i < 3; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 2 + Math.random() * 4;
+                    const size = 30 + Math.random() * 40;
+                    
+                    slices.push({
+                        x,
+                        y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed - 2,
+                        size,
+                        alpha: 0.8,
+                        rotation: Math.random() * Math.PI * 2,
+                        time: 0,
+                        isSplash: true,
+                        color: '#ff0000' // Red color for blood
+                    });
+                }
+            }
+
+            // Açılırken skorları yükleyelim
+            window.addEventListener('DOMContentLoaded', function() {
+                loadHighScore();
+                populateHighScores();
+            });
+            
+            // High Scores butonuna tıklandığında skorları güncelleyelim
+            highScoresBtn.addEventListener('click', function() {
+                populateHighScores();
+            });
+        });
+    </script>
+</body>
+</html>
